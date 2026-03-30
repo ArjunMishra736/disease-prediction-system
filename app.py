@@ -1,16 +1,9 @@
 import streamlit as st
-import subprocess
-# Voice input disabled for Streamlit Cloud
-try:
-    import speech_recognition as sr
-    VOICE_AVAILABLE = True
-except:
-    VOICE_AVAILABLE = False
 
 # -------------------------------
 # PAGE CONFIG
 # -------------------------------
-st.set_page_config(page_title="Disease Predictor", page_icon="🩺")
+st.set_page_config(page_title="Disease Prediction System", page_icon="🩺")
 
 # -------------------------------
 # SESSION INIT
@@ -25,82 +18,86 @@ if "messages" not in st.session_state:
 # USER DATABASE
 # -------------------------------
 users = {
-    "anindo": "1234",
-    "admin": "admin123"
+    "admin": "admin123",
+    "user": "1234"
 }
 
 # -------------------------------
 # LOGIN PAGE
 # -------------------------------
 def login_page():
-    st.title("🔐 Login System")
+
+    st.title("🔐 Login")
 
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
 
     if st.button("Login"):
-        if username in users and password == users[username]:
+
+        if username in users and users[username] == password:
+
             st.session_state.logged_in = True
-            st.success("✅ Login Successful")
+            st.success("Login successful")
             st.rerun()
+
         else:
-            st.error("❌ Invalid Credentials")
+            st.error("Invalid username or password")
 
 # -------------------------------
 # LOGOUT
 # -------------------------------
 def logout():
-    st.sidebar.button("🚪 Logout", on_click=lambda: st.session_state.update({"logged_in": False}))
+
+    st.sidebar.button(
+        "Logout",
+        on_click=lambda: st.session_state.update({"logged_in": False})
+    )
 
 # -------------------------------
-# VOICE INPUT FUNCTION
+# DISEASE PREDICTION MODEL
 # -------------------------------
-def get_voice_input():
-    if not VOICE_AVAILABLE:
-        st.warning("Voice input not supported on cloud.")
-        return None
+def predict_disease(age, gender, exercise, bp):
 
-    r = sr.Recognizer()
-    try:
-        with sr.Microphone() as source:
-            st.info("🎤 Speak now...")
-            audio = r.listen(source, timeout=5)
-        text = r.recognize_google(audio)
-        return text
-    except:
-        return None
+    risk_score = 0
+
+    if age > 50:
+        risk_score += 1
+
+    if bp == 1:
+        risk_score += 1
+
+    if exercise == 0:
+        risk_score += 1
+
+    if risk_score >= 2:
+        return 1
+    else:
+        return 0
 
 # -------------------------------
-# CHATBOT LOGIC (OFFLINE AI)
+# CHATBOT
 # -------------------------------
 def chatbot_response(query):
+
     q = query.lower()
 
-    # Disease-based answers
     if "diabetes" in q:
-        return "Diabetes is caused by high blood sugar. Control it with diet, exercise, and regular monitoring."
+        return "Diabetes is related to high blood sugar. Maintain diet and exercise."
 
     elif "bp" in q or "blood pressure" in q:
-        return "High BP can lead to heart problems. Reduce salt, exercise daily, and avoid stress."
+        return "High blood pressure can cause heart disease. Reduce salt and stress."
 
     elif "fever" in q:
-        return "Fever may indicate infection. Stay hydrated and take rest."
-
-    elif "headache" in q:
-        return "Headaches are often due to stress or dehydration. Drink water and rest."
-
-    elif "cold" in q or "cough" in q:
-        return "Common cold is usually viral. Drink warm fluids and take rest."
+        return "Fever may indicate infection. Stay hydrated and rest."
 
     elif "diet" in q:
-        return "Eat fruits, vegetables, protein, and avoid junk food."
+        return "Eat fruits, vegetables and protein. Avoid junk food."
 
     elif "exercise" in q:
-        return "Exercise daily for at least 30 minutes to stay healthy."
+        return "Exercise at least 30 minutes daily."
 
-    # General fallback
     else:
-        return "I recommend consulting a doctor for accurate diagnosis."
+        return "Please consult a doctor for accurate diagnosis."
 
 # -------------------------------
 # MAIN APP
@@ -110,103 +107,80 @@ def main_app():
     st.sidebar.title("Dashboard")
     logout()
 
-    st.markdown("<h1 style='text-align:center;'>🩺 Disease Prediction System</h1>", unsafe_allow_html=True)
+    st.title("🩺 Disease Prediction System")
 
-    st.subheader("Enter Your Health Details")
+    st.subheader("Enter Health Details")
 
     col1, col2 = st.columns(2)
 
     with col1:
+
         age = st.slider("Age", 10, 80, 25)
         gender = st.selectbox("Gender", ["Male", "Female"])
 
     with col2:
+
         exercise = st.selectbox("Exercise", ["Yes", "No"])
         bp = st.selectbox("Blood Pressure", ["Normal", "High"])
 
-    # Convert values
     gender = 1 if gender == "Male" else 0
     exercise = 1 if exercise == "Yes" else 0
     bp = 1 if bp == "High" else 0
 
     # -------------------------------
-    # PREDICTION
+    # PREDICT BUTTON
     # -------------------------------
     if st.button("Predict"):
 
-        r_path = r"C:\Program Files\R\R-4.5.3\bin\Rscript.exe"
-
-        result = subprocess.run([
-            r_path,
-            "predict_model.R",
-            str(age), str(gender),
-            str(exercise), str(bp)
-        ], capture_output=True, text=True)
-
-        output = result.stdout.strip()
+        result = predict_disease(age, gender, exercise, bp)
 
         st.markdown("---")
 
-        if output == "1":
+        if result == 1:
+
             st.error("⚠️ High Risk of Disease")
-            st.write("### Precautions:")
+
+            st.write("### Precautions")
+
             st.write("- Regular health checkups")
-            st.write("- Maintain diet")
+            st.write("- Maintain healthy diet")
             st.write("- Exercise regularly")
 
         else:
+
             st.success("✅ Low Risk")
-            st.write("### Advice:")
-            st.write("- Keep healthy habits")
+
+            st.write("### Advice")
+
+            st.write("- Continue healthy lifestyle")
 
     # -------------------------------
-    # CHATBOT UI
+    # CHATBOT
     # -------------------------------
     st.markdown("---")
     st.subheader("🤖 AI Doctor Assistant")
 
-    # FAQ QUICK BUTTONS
-    st.write("💡 Try asking:")
-    col1, col2, col3 = st.columns(3)
+    user_input = st.chat_input("Ask health question")
 
-    if col1.button("Diabetes"):
-        user_input = "diabetes"
-    elif col2.button("Blood Pressure"):
-        user_input = "blood pressure"
-    elif col3.button("Fever"):
-        user_input = "fever"
-    else:
-        user_input = None
-
-    # Voice button
-    if st.button("🎤 Speak"):
-        voice = get_voice_input()
-        if voice:
-            user_input = voice
-
-    # Chat input
-    text_input = st.chat_input("Ask your health question...")
-    if text_input:
-        user_input = text_input
-
-    # Process input
     if user_input:
-        st.session_state.messages.append({"role": "user", "content": user_input})
+
+        st.session_state.messages.append({"role":"user","content":user_input})
+
         st.chat_message("user").write(user_input)
 
         reply = chatbot_response(user_input)
 
-        st.session_state.messages.append({"role": "assistant", "content": reply})
-        st.chat_message("assistant").write(reply)
+        st.session_state.messages.append({"role":"assistant","content":reply})
 
-    # Show history
-    for msg in st.session_state.messages:
-        st.chat_message(msg["role"]).write(msg["content"])
+        st.chat_message("assistant").write(reply)
 
 # -------------------------------
 # APP FLOW
 # -------------------------------
 if not st.session_state.logged_in:
+
     login_page()
+
 else:
+
     main_app()
