@@ -2,6 +2,4 @@ streamlit
 pandas
 numpy
 scikit-learn
-SpeechRecognition
-rpy2
 openpyxl
