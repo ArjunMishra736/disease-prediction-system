@@ -1,6 +1,11 @@
 import streamlit as st
 import subprocess
-import speech_recognition as sr
+# Voice input disabled for Streamlit Cloud
+try:
+    import speech_recognition as sr
+    VOICE_AVAILABLE = True
+except:
+    VOICE_AVAILABLE = False
 
 # -------------------------------
 # PAGE CONFIG
@@ -51,6 +56,10 @@ def logout():
 # VOICE INPUT FUNCTION
 # -------------------------------
 def get_voice_input():
+    if not VOICE_AVAILABLE:
+        st.warning("Voice input not supported on cloud.")
+        return None
+
     r = sr.Recognizer()
     try:
         with sr.Microphone() as source:
